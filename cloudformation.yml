@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Amazon Connect Configuration for Turistik
+
+Resources:
+  ConnectQueue:
+    Type: "AWS::Connect::Queue"
+    Properties:
+      InstanceArn: "arn:aws:connect:us-west-2:545009831905:instance/a9183b14-6cbc-4734-9a34-257716731aa2"
+      Name: "TuristikQueue"
+      Description: "Queue for Turistik contact center"
+      HoursOfOperationArn: "arn:aws:connect:us-west-2:545009831905:instance/a9183b14-6cbc-4734-9a34-257716731aa2/operating-hours/e650d1d2-2c90-4e07-ae1b-e873ac495848"
+      OutboundCallerConfig:
+        OutboundCallerIdName: "Turistik"
+        OutboundCallerIdNumberArn: "arn:aws:connect:us-west-2:545009831905:phone-number/2edc9db2-ec99-4f34-a894-2244a55f0a71"
+
+  ConnectContactFlow:
+    Type: "AWS::Connect::ContactFlow"
+    Properties:
+      InstanceArn: "arn:aws:connect:us-west-2:545009831905:instance/a9183b14-6cbc-4734-9a34-257716731aa2"
+      Name: "TuristikContactFlow"
+      Type: "CONTACT_FLOW"
+      Content: |
+        {
+          "Version": "2019-10-30",
+          "StartAction": "WelcomeMessage",
+          "Actions": [
+            {
+              "Identifier": "WelcomeMessage",
+              "Type": "PlayPrompt",
+              "Parameters": {
+                "Text": "Bienvenido a Turistik. Para horarios, presione 1. Para puntos de interés, presione 2. Para hablar con un agente, presione 3.",
+                "TextToSpeechVoice": "Andres (Neural)"
+              },
+              "Transitions": {
+                "NextAction": "GetInput"
+              }
+            },
+            {
+              "Identifier": "GetInput",
+              "Type": "GetParticipantInput",
+              "Parameters": {
+                "InputOptions": [
+                  {
+                    "Input": "1",
+                    "NextAction": "Option1"
+                  },
+                  {
+                    "Input": "2",
+                    "NextAction": "Option2"
+                  },
+                  {
+                    "Input": "3",
+                    "NextAction": "TransferToQueue"
+                  }
+                ],
+                "Timeout": 5
+              }
+            },
+            {
+              "Identifier": "Option1",
+              "Type": "PlayPrompt",
+              "Parameters": {
+                "Text": "El horario del Cerro San Cristóbal es de lunes a domingo de 10:00 a 19:00.",
+                "TextToSpeechVoice": "Andres (Neural)"
+              }
+            },
+            {
+              "Identifier": "Option2",
+              "Type": "PlayPrompt",
+              "Parameters": {
+                "Text": "Los puntos de interés incluyen el Funicular, el Santuario y la Terraza Bellavista.",
+                "TextToSpeechVoice": "Andres (Neural)"
+              }
+            },
+            {
+              "Identifier": "TransferToQueue",
+              "Type": "TransferToQueue",
+              "Parameters": {
+                "QueueArn": "arn:aws:connect:us-west-2:545009831905:instance/a9183b14-6cbc-4734-9a34-257716731aa2/queue/TuristikQueue"
+              }
+            }
+          ]
+        }
+
+  ConnectUser:
+    Type: "AWS::Connect::User"
+    Properties:
+      InstanceArn: "arn:aws:connect:us-west-2:545009831905:instance/a9183b14-6cbc-4734-9a34-257716731aa2"
+      Username: "agenteturistik"
+      Password: "Darts-2024#"
+      UserIdentityInfo:
+        FirstName: "Agente"
+        LastName: "Turistik"
+        Email: "agenteturistik@example.com"
+      RoutingProfileArn: "arn:aws:connect:us-west-2:545009831905:instance/a9183b14-6cbc-4734-9a34-257716731aa2/routing-profile/06090806-64e0-4b72-a3f8-b9aeab30f0c5"
+      SecurityProfileArns:
+        - "arn:aws:connect:us-west-2:545009831905:instance/a9183b14-6cbc-4734-9a34-257716731aa2/security-profile/a499724d-85c1-4fdc-a2cf-35015292e937"
+      PhoneConfig:
+        PhoneType: "SOFT_PHONE"
+        AfterContactWorkTimeLimit: 60
+
+Outputs:
+  QueueArn:
+    Description: "ARN of the created queue."
+    Value: !GetAtt ConnectQueue.Arn
+
+  ContactFlowArn:
+    Description: "ARN of the created contact flow."
+    Value: !GetAtt ConnectContactFlow.Arn
+
+  UserId:
+    Description: "ID of the created user."
+    Value: !Ref ConnectUser
